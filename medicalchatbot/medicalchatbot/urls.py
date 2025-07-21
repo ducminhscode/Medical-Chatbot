@@ -19,13 +19,17 @@ from django.urls import path, include, re_path
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 schema_view = get_schema_view(
     openapi.Info(
         title="App API",
         default_version="v1",
         description="APIs for App",
-        contact=openapi.Contact(email='2251012095minh@ou.edu.vn'),
+        contact=openapi.Contact(email=os.getenv("EMAIL")),
         license=openapi.License(name="Medical Chatbot"),
     ),
     public=True,

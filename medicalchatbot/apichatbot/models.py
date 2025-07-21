@@ -8,7 +8,6 @@ import uuid
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add=True, null=True)
     updated_date = models.DateTimeField(auto_now=True, null=True)
-    deleted_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -26,7 +25,7 @@ class Role(IntEnum):
 
 class User(AbstractUser):
     avatar = CloudinaryField('avatar', null=False, blank=False, folder='ChatBot',
-                             default='https://res.cloudinary.com/dqw4mc8dg/image/upload/v1737620154/aj6sc6isvelwkotlo1vw_zxmebm_nbsj9i.png')
+                             default='https://res.cloudinary.com/dp9b0dkkt/image/upload/v1745512749/de995be2-6311-4125-9ac2-19e11fcaf801_jo8gcs.png')
     email = models.EmailField(unique=True, null=False, max_length=255)
     is_male = models.BooleanField(null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)

@@ -6,6 +6,7 @@ router = DefaultRouter()
 router.register('user', views.UserViewSet, basename='user')
 router.register('chat-sessions', views.ChatSessionViewSet, basename='chat-sessions')
 router.register('knowledge', views.KnowledgeBaseViewSet, basename='knowledge')
+router.register('register', views.RegisterViewSet, basename='register')
 
 urlpatterns = [
     path('', include(router.urls)),

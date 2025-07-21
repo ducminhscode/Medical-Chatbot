@@ -2,7 +2,7 @@ from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from .perms import OwnerPermission, AdminPermission
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .serializers import UserSerializer, ChangePasswordSerializer, ChatSessionSerializer, MessageSerializer, \
     KnowledgeBaseSerializer
@@ -17,8 +17,10 @@ rag_system = RAGSystem()
 
 class UserViewSet(viewsets.ViewSet):
     def get_permissions(self):
-        if self.action in ["change_password", "get_current_user"]:
+        if self.action in ["change_password", "get_current_user", "update_profile"]:
             return [OwnerPermission()]
+        if self.action == "get_all_users":
+            return [AdminPermission()]
         return [IsAuthenticated()]
 
     @action(methods=['get'], url_path='all-users', detail=False)
@@ -45,16 +47,31 @@ class UserViewSet(viewsets.ViewSet):
             user.set_password(serializer.validated_data['new_password'])
             user.save(update_fields=['password'])
 
-            if hasattr(user, 'teacher') and user.teacher.must_change_password:
-                teacher = user.teacher
-                teacher.must_change_password = False
-                teacher.password_reset_time = None
-                teacher.save(update_fields=['must_change_password', 'password_reset_time'])
-
             return Response({"message": "Mật khẩu đã được thay đổi thành công."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['patch'], url_path='profile', detail=False)
+    def update_profile(self, request):
+        user = request.user
+        self.check_object_permissions(request, user)
+
+        serializer = UserSerializer(user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RegisterViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def create(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ChatSessionViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, OwnerPermission]
@@ -79,6 +96,24 @@ class ChatSessionViewSet(viewsets.ViewSet):
 
         serializer = ChatSessionSerializer(chat_session)
         return Response(serializer.data)
+
+    def update(self, request, pk=None):
+        try:
+            chat_session = ChatSession.objects.get(pk=pk, user=request.user)
+        except ChatSession.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ChatSessionSerializer(
+            chat_session,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, pk=None):
         try:

@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,10 +46,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'cloudinary',
+    'cloudinary_storage',
     'oauth2_provider'
 ]
 
-HUGGINGFACE_API_TOKEN = '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'
+HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -92,9 +96,9 @@ WSGI_APPLICATION = 'medicalchatbot.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'chatbotdb',
+        'NAME': os.getenv('DATABASE_NAME'),
         'USER': 'root',
-        'PASSWORD': '021020',
+        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': ''
     }
 }
@@ -102,15 +106,15 @@ DATABASES = {
 import cloudinary
 
 cloudinary.config(
-    cloud_name="dp9b0dkkt",
-    api_key="785552982855161",
-    api_secret="v4laZXdEttJZYUUr3sSJFRzGV30"
+    cloud_name=os.getenv('CLOUD_NAME'),
+    api_key=os.getenv('CLOUD_API_KEY'),
+    api_secret=os.getenv('CLOUD_API_SECRET')
 )
 
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'dp9b0dkkt',
-    'API_KEY': '785552982855161',
-    'API_SECRET': 'v4laZXdEttJZYUUr3sSJFRzGV30'
+    'CLOUD_NAME': os.getenv('CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUD_API_KEY'),
+    'API_SECRET': os.getenv('CLOUD_API_SECRET')
 }
 
 MEDIA_URL = '/data/'

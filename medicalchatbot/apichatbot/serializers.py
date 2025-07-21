@@ -11,19 +11,32 @@ class UserSerializer(ModelSerializer):
         u.save()
         return u
 
+    def update(self, instance, validated_data):
+        if 'username' in validated_data:
+            validated_data.pop('username', None)
+            raise serializers.ValidationError("Không thể thay đổi tên đăng nhập.")
+
+        if 'role' in validated_data:
+            validated_data.pop('role', None)
+            raise serializers.ValidationError("Yêu cầu bị từ chối.")
+
+        validated_data.pop('password', None)
+        return super().update(instance, validated_data)
+
     class Meta:
         model = User
         fields = ["id", "username", "password", "avatar", "first_name", "last_name", "email", "is_male", "date_of_birth", "role"]
         extra_kwargs = {
             'password': {
-                'write_only': True,
-                'required': False
+                'write_only': True
             }
         }
+        read_only_fields = ['id']
 
 class ChangePasswordSerializer(Serializer):
     current_password = CharField(write_only=True, required=True)
     new_password = CharField(write_only=True, required=True)
+    confirm_password = CharField(write_only=True, required=True)
 
     def validate_current_password(self, value):
         user = self.context['request'].user
