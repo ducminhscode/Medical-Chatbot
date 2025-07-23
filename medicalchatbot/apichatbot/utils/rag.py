@@ -6,12 +6,15 @@ from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class RAGSystem:
     def __init__(self):
         # Khai báo biến
-        self.OPENAI_API_KEY = 'GbHKnS-9D1JaSDuaaLP9ZWfV6oYzlxHeRHysPNd3_hT6pjga1GgIRCTqNu_lxR18X_lip7ii2a3nz2Nzqj1EBKtaZv0'
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
         self.OPENAI_URL = "https://conductor.arcee.ai/v1"
         self.OPENAI_MODEL = "auto"
         self.CHROMA_PATH = "vectorstore"
@@ -86,17 +89,17 @@ class RAGSystem:
         )
 
     def _create_qa_chain(self):
-        prompt_template = """Answer the question using your own knowledge and the provided context.
+        prompt_template = """You are a helpful AI assistant. Continue the conversation below, using the provided context when relevant.
 
-Context:
-{context}
+        Context:
+        {context}
+        
+        Current Question: {question}
 
-Question: {question}
+        Conversation History:
+        {chat_history}
 
-Previous conversation:
-{chat_history}
-
-Answer:"""
+        Answer in a helpful, friendly manner. If the question isn't related to the context, use your general knowledge to answer:"""
 
         prompt = ChatPromptTemplate.from_template(prompt_template)
 
