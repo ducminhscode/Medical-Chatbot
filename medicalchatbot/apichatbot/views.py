@@ -144,11 +144,15 @@ class MessageViewSet(viewsets.ViewSet):
         except ChatSession.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # Lấy lịch sử trò chuyện để biết bối cảnh
-        chat_history = [
-            (msg.text, msg.sender)
-            for msg in chat_session.messages.all().order_by('created_date')
-        ]
+        messages = chat_session.messages.all().order_by('created_date')
+        chat_history = []
+
+        for i in range(0, len(messages) - 1, 2):
+            if i + 1 < len(messages):
+                human_msg = messages[i]
+                ai_msg = messages[i + 1]
+                if human_msg.sender == 'human' and ai_msg.sender == 'ai':
+                    chat_history.append((human_msg.text, ai_msg.text))
 
         # Lưu tin nhắn của người dùng
         user_message = Message.objects.create(
@@ -160,7 +164,7 @@ class MessageViewSet(viewsets.ViewSet):
         # Nhận AI response từ RAG
         ai_response = rag_system.query(
             question=request.data.get('text', ''),
-            chat_history=chat_history
+            chat_history=chat_history  # Đã được định dạng đúng
         )
 
         # Lưu AI response

@@ -8,6 +8,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -46,7 +47,7 @@ class RAGSystem:
     # Tách văn bản
     def _get_text_splitter(self):
         return RecursiveCharacterTextSplitter(
-            chunk_size=512,
+            chunk_size=1024,
             chunk_overlap=128,
             length_function=len,
             add_start_index=True,
@@ -89,24 +90,26 @@ class RAGSystem:
         )
 
     def _create_qa_chain(self):
-        prompt_template = """You are a helpful AI assistant. Continue the conversation below, using the provided context when relevant.
+        prompt_template = """You are a helpful AI assistant. Focus on answering the current question using the provided context. Only use the conversation history if it is directly relevant to the current question.
 
         Context:
         {context}
         
-        Current Question: {question}
-
         Conversation History:
         {chat_history}
-
-        Answer in a helpful, friendly manner. If the question isn't related to the context, use your general knowledge to answer:"""
+        
+        Current Question: {question}
+        
+        Answer in a helpful, friendly manner with detailed explanations. 
+        Provide comprehensive information and examples when possible.
+        If the question isn't related to the context, use your general knowledge to answer:"""
 
         prompt = ChatPromptTemplate.from_template(prompt_template)
 
         return ConversationalRetrievalChain.from_llm(
             llm=self.llm,
             retriever=self.vectorstore.as_retriever(
-                search_type="similarity", search_kwargs={"k": 3}
+                search_type="similarity", search_kwargs={"k": 5}
             ),
             return_source_documents=True,
             combine_docs_chain_kwargs={"prompt": prompt},
