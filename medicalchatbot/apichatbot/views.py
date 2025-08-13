@@ -164,7 +164,7 @@ class MessageViewSet(viewsets.ViewSet):
         # Nhận AI response từ RAG
         ai_response = rag_system.query(
             question=request.data.get('text', ''),
-            chat_history=chat_history  # Đã được định dạng đúng
+            chat_history=chat_history
         )
 
         # Lưu AI response
@@ -182,7 +182,7 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, AdminPermission]
 
     def list(self, request):
-        queryset = KnowledgeBase.objects.filter(is_active=True)
+        queryset = KnowledgeBase.objects.all()
         serializer = KnowledgeBaseSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -204,6 +204,16 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
         except KnowledgeBase.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        knowledge.is_active = False
-        knowledge.save()
+        file_path = os.path.join(settings.MEDIA_ROOT, knowledge.file.name)
+
+        try:
+            rag_system.vectorstore.delete(where={"source": file_path})
+
+        except Exception as e:
+            print(f"Lỗi khi xóa khỏi vectorstore: {e}")
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        knowledge.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
