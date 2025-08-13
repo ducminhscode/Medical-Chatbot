@@ -1,6 +1,8 @@
 from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
+
 from .perms import OwnerPermission, AdminPermission
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -180,6 +182,7 @@ class MessageViewSet(viewsets.ViewSet):
 
 class KnowledgeBaseViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, AdminPermission]
+    parser_classes = [MultiPartParser, FormParser]
 
     def list(self, request):
         queryset = KnowledgeBase.objects.all()
@@ -187,16 +190,25 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self, request):
-        serializer = KnowledgeBaseSerializer(data=request.data)
-        if serializer.is_valid():
-            knowledge = serializer.save(uploaded_by=request.user)
+        files = request.FILES.getlist('file')
+        if not files:
+            return Response({"error": "Không có file nào được upload."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Thêm tài liệu vào RAG
+        created_objects = []
+        for f in files:
+            knowledge = KnowledgeBase.objects.create(
+                title=request.data.get('title', ''),
+                description=request.data.get('description', ''),
+                file=f,
+                uploaded_by=request.user
+            )
+            created_objects.append(knowledge)
+
             file_path = os.path.join(settings.MEDIA_ROOT, knowledge.file.name)
             rag_system.add_documents(file_path)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = KnowledgeBaseSerializer(created_objects, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, pk=None):
         try:
@@ -216,4 +228,4 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
             os.remove(file_path)
 
         knowledge.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"success": "File đã được xóa."},status=status.HTTP_204_NO_CONTENT)

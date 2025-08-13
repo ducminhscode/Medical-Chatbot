@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'cloudinary',
     'cloudinary_storage',
-    'oauth2_provider'
+    'oauth2_provider',
+    'corsheaders'
 ]
 
 HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN')
@@ -61,6 +62,7 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = 'apichatbot.User'
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -123,6 +125,8 @@ CLOUDINARY_STORAGE = {
 
 MEDIA_URL = '/data/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
