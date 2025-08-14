@@ -167,10 +167,7 @@ export default function Register() {
                         required
                         value={dateOfBirth}
                         onChange={(e) => setDateOfBirth(e.target.value)}
-                        sx={{
-                            mb: 2,
-                            "& .MuiOutlinedInput-root": { borderRadius: "50px" },
-                        }}
+                        sx={{ mb: 2, "& .MuiOutlinedInput-root": { borderRadius: "50px" } }}
                         InputLabelProps={{
                             shrink: true, sx: {
                                 "& .MuiInputLabel-asterisk": { display: "none" },
@@ -281,14 +278,7 @@ export default function Register() {
                         variant="contained"
                         type="submit"
                         fullWidth
-                        sx={{
-                            mt: 1,
-                            borderRadius: "50px",
-                            paddingY: "10px",
-                            backgroundColor: "black",
-                            "&:hover": { backgroundColor: "#333" },
-                            textTransform: "none",
-                        }}
+                        sx={{ mt: 1, borderRadius: "50px", paddingY: "10px", backgroundColor: "black", "&:hover": { backgroundColor: "#333" }, textTransform: "none" }}
                     >
                         Đăng ký
                     </Button>

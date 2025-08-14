@@ -1,20 +1,40 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import MyUserReducer from './reducers/MyUserReducer';
 import { MyDispatchContext, MyUserContext } from "./configs/Contexts";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Home from "./components/Home";
+import cookie from 'react-cookies';
+import { authApis, endpoints } from "./configs/APIs";
 
 function App() {
   const [user, dispatch] = useReducer(MyUserReducer, null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      dispatch({ type: "login", payload: JSON.parse(savedUser) });
+    const token = cookie.load("access_token");
+    if (token) {
+      authApis().get(endpoints['current_user'])
+        .then(res => {
+          dispatch({
+            type: 'login',
+            payload: res.data,
+          });
+        })
+        .catch(err => {
+          console.error('Failed to load user data:', err);
+          cookie.remove('access_token');
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, []);
+
+  if (loading) {
+    return <div></div>;
+  }
 
   return (
     <MyUserContext.Provider value={user}>

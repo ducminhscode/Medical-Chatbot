@@ -58,6 +58,9 @@ class ChatSession(BaseModel):
     def __str__(self):
         return str(self.id)
 
+    class Meta:
+        ordering = ['-updated_date']
+
 
 class Message(BaseModel):
     sender = models.CharField(max_length=10, choices=(('human', 'Human'), ('ai', 'AI')))
@@ -66,3 +69,6 @@ class Message(BaseModel):
 
     def __str__(self):
         return f"[{self.role.upper()}] {self.message[:50]}"
+
+    class Meta:
+        ordering = ['created_date']

@@ -47,7 +47,7 @@ class ChangePasswordSerializer(Serializer):
 class ChatSessionSerializer(ModelSerializer):
     class Meta:
         model = ChatSession
-        fields = ['id', 'session_name', 'created_date', 'user']
+        fields = ['id', 'session_name', 'created_date', 'updated_date', 'user']
         read_only_fields = ['id', 'created_date', 'user']
 
 class MessageSerializer(ModelSerializer):

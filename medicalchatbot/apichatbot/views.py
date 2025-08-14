@@ -32,6 +32,17 @@ class UserViewSet(viewsets.ViewSet):
         serializer = UserSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(methods=['get'], url_path='by-id/(?P<id>[^/.]+)', detail=False)
+    def get_user_by_id(self, request, **kwargs):
+        user_id = kwargs.get('id')
+        self.check_permissions(request)
+        try:
+            user = User.objects.get(pk=user_id, is_active=True)
+        except User.DoesNotExist:
+            return Response({"error": "Người dùng không tồn tại hoặc đã bị khóa."},status=status.HTTP_404_NOT_FOUND)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(methods=['get'], url_path='current', detail=False)
     def get_current_user(self, request):
         user = request.user
@@ -188,6 +199,15 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
         queryset = KnowledgeBase.objects.all()
         serializer = KnowledgeBaseSerializer(queryset, many=True)
         return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        try:
+            knowledge = KnowledgeBase.objects.get(pk=pk)
+        except KnowledgeBase.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = KnowledgeBaseSerializer(knowledge)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request):
         files = request.FILES.getlist('file')

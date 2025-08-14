@@ -1,9 +1,10 @@
 import React, { useState, useContext } from "react";
 import { TextField, Button, Container, Typography, Box, Alert, Link, InputAdornment, IconButton } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import APIs, { endpoints } from "../configs/APIs";
+import APIs, { authApis, endpoints } from "../configs/APIs";
 import { MyDispatchContext } from "../configs/Contexts";
 import { useNavigate, useLocation } from "react-router-dom";
+import cookie from 'react-cookies';
 
 export default function Login() {
     const [username, setUsername] = useState("");
@@ -30,13 +31,13 @@ export default function Login() {
 
             const accessToken = tokenRes.data.access_token;
 
-            localStorage.setItem("access_token", accessToken);
+            // Save access token to cookie
+            cookie.save("access_token", accessToken, { path: '/' });
 
-            let userRes = await APIs.get(endpoints["current-user"], {
-                headers: { Authorization: `Bearer ${accessToken}` },
-            });
+            let userRes = await authApis().get(endpoints["current-user"]);
 
-            localStorage.setItem("user", JSON.stringify(userRes.data));
+            // Save user data to cookie
+            cookie.save("user", JSON.stringify(userRes.data), { path: '/' });
 
             dispatch({
                 type: "login",
