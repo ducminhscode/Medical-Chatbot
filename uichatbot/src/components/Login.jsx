@@ -29,15 +29,15 @@ export default function Login() {
                 grant_type: "password",
             });
 
+            const cookieOptions = {
+                path: '/'
+            };
+
             const accessToken = tokenRes.data.access_token;
 
-            // Save access token to cookie
-            cookie.save("access_token", accessToken, { path: '/' });
+            cookie.save("access_token", accessToken, cookieOptions);
 
-            let userRes = await authApis().get(endpoints["current-user"]);
-
-            // Save user data to cookie
-            cookie.save("user", JSON.stringify(userRes.data), { path: '/' });
+            let userRes = await authApis().get(endpoints["current_user"]);
 
             dispatch({
                 type: "login",
