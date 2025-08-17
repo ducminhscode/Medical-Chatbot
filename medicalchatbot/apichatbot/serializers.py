@@ -31,7 +31,7 @@ class UserSerializer(ModelSerializer):
                 'write_only': True
             }
         }
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'username', 'email', 'role']
 
 class ChangePasswordSerializer(Serializer):
     current_password = CharField(write_only=True, required=True)

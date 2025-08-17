@@ -29,6 +29,7 @@ class UserViewSet(viewsets.ViewSet):
     def get_all_users(self, request):
         self.check_permissions(request)
         queryset = User.objects.filter(is_active=True)
+
         serializer = UserSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

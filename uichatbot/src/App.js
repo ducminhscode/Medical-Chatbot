@@ -7,6 +7,7 @@ import Register from "./components/Register";
 import Home from "./components/Home";
 import cookie from 'react-cookies';
 import { authApis, endpoints } from "./configs/APIs";
+import Profile from "./components/Profile";
 
 function App() {
   const [user, dispatch] = useReducer(MyUserReducer, null);
@@ -44,8 +45,17 @@ function App() {
             <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
-              path="/home"
-              element={user ? <Home /> : <Navigate to="/" replace />}
+              path="*"
+              element={
+                <>
+                  <div>
+                    <Routes>
+                      <Route path="/home" element={user ? <Home /> : <Navigate to="/" replace />} />
+                      <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" replace />} />
+                    </Routes>
+                  </div>
+                </>
+              }
             />
           </Routes>
         </BrowserRouter>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TextField, Button, Container, Typography, Box, Alert, Avatar, Link, FormControl, InputLabel, Select, MenuItem, IconButton, InputAdornment } from "@mui/material";
+import { TextField, Button, Container, Typography, Box, Alert, Avatar, Link, FormControl, InputLabel, Select, MenuItem, IconButton, InputAdornment, CircularProgress } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import APIs, { endpoints } from "../configs/APIs";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ export default function Register() {
     const [isMale, setIsMale] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const [avatar, setAvatar] = useState(null);
     const [previewAvatar, setPreviewAvatar] = useState("");
@@ -50,6 +51,7 @@ export default function Register() {
     const handleRegister = async (e) => {
         e.preventDefault();
         setError("");
+        setLoading(true);
 
         if (password !== confirmPassword) {
             setError("Mật khẩu xác nhận không khớp");
@@ -84,6 +86,8 @@ export default function Register() {
             setPreviewAvatar("");
         } catch (err) {
             setError("Đăng ký thất bại. Kiểm tra lại thông tin.");
+        }finally {
+            setLoading(false);
         }
     };
 
@@ -103,7 +107,7 @@ export default function Register() {
         <Box sx={{ backgroundColor: "white", minHeight: "100vh", position: "relative" }}>
             <Box sx={{ position: "absolute", top: 20, left: 30 }}>
                 <Typography variant="h6" fontWeight="bold" sx={{ fontSize: "1.25rem" }}>
-                    <Link href="/" underline="none" color="inherit">
+                    <Link href="/home" underline="none" color="inherit">
                         ChatMDC
                     </Link>
                 </Typography>
@@ -124,7 +128,7 @@ export default function Register() {
                             style={{ display: "none" }}
                             onChange={handleAvatarChange}
                         />
-                        <label htmlFor="avatar-upload" style={{ cursor: "pointer" }}>
+                        <label htmlFor="avatar-upload" style={{ cursor: "pointer", justifyContent: "center", display: "flex" }}>
                             <Avatar src={previewAvatar} sx={{ width: 80, height: 80 }} />
                         </label>
                     </Box>
@@ -277,10 +281,11 @@ export default function Register() {
                     <Button
                         variant="contained"
                         type="submit"
+                        disabled={loading}
                         fullWidth
                         sx={{ mt: 1, borderRadius: "50px", paddingY: "10px", backgroundColor: "black", "&:hover": { backgroundColor: "#333" }, textTransform: "none" }}
                     >
-                        Đăng ký
+                        {loading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : "Đăng ký"}
                     </Button>
                 </Box>
 

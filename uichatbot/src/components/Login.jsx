@@ -1,5 +1,5 @@
-import React, { useState, useContext } from "react";
-import { TextField, Button, Container, Typography, Box, Alert, Link, InputAdornment, IconButton } from "@mui/material";
+import { useState, useContext } from "react";
+import { TextField, Button, Container, Typography, Box, Alert, Link, InputAdornment, IconButton, CircularProgress } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import APIs, { authApis, endpoints } from "../configs/APIs";
 import { MyDispatchContext } from "../configs/Contexts";
@@ -10,6 +10,7 @@ export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const dispatch = useContext(MyDispatchContext);
     const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
+        setLoading(true);
 
         try {
             let tokenRes = await APIs.post(endpoints["login"], {
@@ -45,8 +47,9 @@ export default function Login() {
             });
             navigate("/home");
         } catch (err) {
-            console.error(err);
             setError("Sai tên đăng nhập hoặc mật khẩu!");
+        }finally{
+            setLoading(false);
         }
     };
 
@@ -58,7 +61,7 @@ export default function Login() {
         <Box sx={{ backgroundColor: "white", minHeight: "100vh", position: "relative" }}>
             <Box sx={{ position: "absolute", top: 20, left: 30 }}>
                 <Typography variant="h6" fontWeight="bold" sx={{ fontSize: "1.25rem" }}>
-                    <Link href="/" underline="none" color="inherit">
+                    <Link href="/home" underline="none" color="inherit">
                         ChatMDC
                     </Link>
                 </Typography>
@@ -124,6 +127,7 @@ export default function Login() {
                         variant="contained"
                         type="submit"
                         fullWidth
+                        disabled={loading}
                         sx={{
                             mt: 1,
                             borderRadius: "50px",
@@ -133,7 +137,7 @@ export default function Login() {
                             textTransform: "none",
                         }}
                     >
-                        Đăng nhập
+                        {loading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : "Đăng nhập"}
                     </Button>
                 </Box>
 

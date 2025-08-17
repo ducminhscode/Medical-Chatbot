@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useContext } from "react";
-import { Box, Typography, TextField, Button, Alert, CircularProgress, List, Avatar, Divider, ListItem, ListItemText, ListItemButton, Paper, IconButton, InputAdornment, Menu, MenuItem } from "@mui/material";
-import { Send as SendIcon, Settings as SettingsIcon, Logout as LogoutIcon, AccountCircle  } from "@mui/icons-material";
+import { Box, Typography, TextField, Button, Alert, CircularProgress, List, Avatar, Divider, ListItem, ListItemText, ListItemButton, Paper, IconButton, InputAdornment, Menu, MenuItem, Link } from "@mui/material";
+import { Send as SendIcon, Settings as SettingsIcon, Logout as LogoutIcon, AccountCircle } from "@mui/icons-material";
 import { authApis, endpoints } from "../configs/APIs";
 import { useNavigate } from "react-router-dom";
 import cookie from 'react-cookies';
@@ -42,7 +42,7 @@ export default function Home() {
   };
 
   const handleProfile = () => {
-    // navigate("/profile");
+    navigate("/profile");
     handleClose();
   };
 
@@ -147,13 +147,22 @@ export default function Home() {
     }
   };
 
+  const handleAvatarSrc = (avatar) => {
+    if (!avatar) return undefined;
+    if (avatar.startsWith('image/upload/https://res.cloudinary.com/dp9b0dkkt/')) {
+      return avatar.replace('image/upload/', '');
+    }
+    return `https://res.cloudinary.com/dp9b0dkkt/${avatar}`;
+  };
 
   return (
     <Box sx={{ backgroundColor: '#ffffff', minHeight: '100vh', position: 'relative' }}>
       <Box sx={{ display: 'flex', flexDirection: 'row', height: '100vh', width: '100vw', padding: '24px', gap: '24px', boxSizing: 'border-box' }}>
         <Paper sx={{ width: '280px', backgroundColor: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)', border: '1px solid #000000', flexShrink: 0, flex: '0 0 220px', overflow: 'hidden', position: 'relative' }}>
           <Typography variant="h6" sx={{ color: '#000000', fontWeight: 600, marginBottom: '16px' }}>
-            ChatMDC
+            <Link href="/home" underline="none" color="inherit">
+              ChatMDC
+            </Link>
           </Typography>
           <Button
             variant="contained"
@@ -190,7 +199,9 @@ export default function Home() {
               sx={{ display: 'flex', alignItems: "center", gap: '12px', flexGrow: 1, padding: '8px', borderRadius: '6px', backgroundColor: '#ffffff', boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.05)', border: '1px solid #000000', cursor: 'pointer', '&:hover': { backgroundColor: '#e5e5e5' } }}
               onClick={handleProfileClick}
             >
-              <Avatar alt="User Avatar" src={user.avatar} />
+              <Avatar alt="User Avatar" src={handleAvatarSrc(user.avatar)}>
+                {(user.first_name || "U")[0]}
+              </Avatar>
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                   {user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : "User"}
