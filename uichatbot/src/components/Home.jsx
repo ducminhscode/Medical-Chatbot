@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useContext } from "react";
+import { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { Box, Typography, TextField, Button, Alert, CircularProgress, List, Avatar, Divider, ListItem, ListItemText, ListItemButton, Paper, IconButton, InputAdornment, Menu, MenuItem, Link } from "@mui/material";
 import { Send as SendIcon, Settings as SettingsIcon, Logout as LogoutIcon, AccountCircle } from "@mui/icons-material";
 import { authApis, endpoints } from "../configs/APIs";
@@ -16,8 +16,11 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [nextPage, setNextPage] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const observerRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -53,25 +56,53 @@ export default function Home() {
     handleClose();
   };
 
+  const fetchSessions = useCallback(async (url = endpoints["chat_sessions"]) => {
+    setLoading(true);
+    try {
+      const token = cookie.load("access_token");
+      if (!token) {
+        navigate("/");
+        return;
+      }
+      const response = await authApis().get(url);
+      setSessions((prev) => [...prev, ...(response.data.results || [])]);
+      setNextPage(response.data.next);
+      setHasMore(!!response.data.next);
+    } catch (err) {
+      setError("Không thể tải danh sách phiên chat!");
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
   useEffect(() => {
-    const fetchSessions = async () => {
-      setLoading(true);
-      try {
-        const token = cookie.load("access_token");
-        if (!token) {
-          navigate("/");
-          return;
+    fetchSessions();
+  }, [fetchSessions]);
+
+  useEffect(() => {
+    if (!hasMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && nextPage) {
+          fetchSessions(nextPage);
         }
-        const response = await authApis().get(endpoints["chat_sessions"]);
-        setSessions(response.data);
-      } catch (err) {
-        setError("Không thể tải danh sách phiên chat!");
-      } finally {
-        setLoading(false);
+      },
+      { threshold: 1.0 }
+    );
+
+    const currentRef = observerRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
-    fetchSessions();
-  }, [navigate]);
+  }, [nextPage, hasMore, loading, fetchSessions]);
+
 
   useEffect(() => {
     if (selectedSession) {
@@ -99,7 +130,7 @@ export default function Home() {
     setLoading(true);
     try {
       const response = await authApis().post(endpoints["chat_sessions"], {});
-      setSessions([...sessions, response.data]);
+      setSessions((prev) => [...prev, response.data]);
       setSelectedSession(response.data);
       return response.data;
     } catch (err) {
@@ -139,7 +170,6 @@ export default function Home() {
       await authApis().post(endpoints["messages"](currentSession.id), { text: newMessage });
       const response = await authApis().get(endpoints["messages"](currentSession.id));
       setMessages(response.data);
-
     } catch (err) {
       setError("Không thể tạo session hoặc gửi tin nhắn!");
     } finally {
@@ -192,6 +222,11 @@ export default function Home() {
                 </ListItemButton>
               </ListItem>
             ))}
+            {hasMore && (
+              <div ref={observerRef} style={{ height: '20px' }}>
+                {loading && <CircularProgress size={20} sx={{ display: 'block', margin: '0 auto' }} />}
+              </div>
+            )}
           </List>
           <Box sx={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}>
             <Divider sx={{ marginY: 1 }} />
@@ -326,7 +361,7 @@ export default function Home() {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               disabled={sending}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '25px', backgroundColor: '#ffffff', color: '#000000', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#333333' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '& .MuiInputBase-input': { color: '#000000' }, }, }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '25px', backgroundColor: '#ffffff', color: '#000000', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#333333' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '& .MuiInputBase-input': { color: '#000000' }, } }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">

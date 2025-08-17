@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from .paginators import Pagination
 from .perms import OwnerPermission, AdminPermission
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -30,8 +31,11 @@ class UserViewSet(viewsets.ViewSet):
         self.check_permissions(request)
         queryset = User.objects.filter(is_active=True)
 
-        serializer = UserSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = Pagination()
+        paginated_queryset = paginator.paginate_queryset(queryset, request, view=self)
+
+        serializer = UserSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @action(methods=['get'], url_path='by-id/(?P<id>[^/.]+)', detail=False)
     def get_user_by_id(self, request, **kwargs):
@@ -92,8 +96,12 @@ class ChatSessionViewSet(viewsets.ViewSet):
 
     def list(self, request):
         queryset = ChatSession.objects.filter(user=request.user)
-        serializer = ChatSessionSerializer(queryset, many=True)
-        return Response(serializer.data)
+
+        paginator = Pagination()
+        paginated_queryset = paginator.paginate_queryset(queryset, request, view=self)
+
+        serializer = ChatSessionSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def create(self, request):
         serializer = ChatSessionSerializer(data=request.data)
@@ -198,8 +206,12 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
 
     def list(self, request):
         queryset = KnowledgeBase.objects.all()
-        serializer = KnowledgeBaseSerializer(queryset, many=True)
-        return Response(serializer.data)
+
+        paginator = Pagination()
+        paginated_queryset = paginator.paginate_queryset(queryset, request, view=self)
+
+        serializer = KnowledgeBaseSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def retrieve(self, request, pk=None):
         try:

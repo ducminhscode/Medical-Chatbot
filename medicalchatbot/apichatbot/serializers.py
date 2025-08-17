@@ -2,6 +2,7 @@ from rest_framework.serializers import ModelSerializer, Serializer, CharField
 from rest_framework import serializers
 from .models import User, ChatSession, Message, KnowledgeBase
 
+
 class UserSerializer(ModelSerializer):
     def create(self, validated_data):
         data = validated_data.copy()
@@ -14,24 +15,26 @@ class UserSerializer(ModelSerializer):
     def update(self, instance, validated_data):
         if 'username' in validated_data:
             validated_data.pop('username', None)
-            raise serializers.ValidationError("Không thể thay đổi tên đăng nhập.")
+            raise serializers.ValidationError({"error": "Không thể thay đổi tên đăng nhập."})
 
         if 'role' in validated_data:
             validated_data.pop('role', None)
-            raise serializers.ValidationError("Yêu cầu bị từ chối.")
+            raise serializers.ValidationError({"error": "Yêu cầu bị từ chối."})
 
         validated_data.pop('password', None)
         return super().update(instance, validated_data)
 
     class Meta:
         model = User
-        fields = ["id", "username", "password", "avatar", "first_name", "last_name", "email", "is_male", "date_of_birth", "role"]
+        fields = ["id", "username", "password", "avatar", "first_name", "last_name", "email", "is_male",
+                  "date_of_birth", "role"]
         extra_kwargs = {
             'password': {
                 'write_only': True
             }
         }
-        read_only_fields = ['id', 'username', 'email', 'role']
+        read_only_fields = ['id', 'role']
+
 
 class ChangePasswordSerializer(Serializer):
     current_password = CharField(write_only=True, required=True)
@@ -44,17 +47,20 @@ class ChangePasswordSerializer(Serializer):
             raise serializers.ValidationError("Mật khẩu hiện tại không đúng.")
         return value
 
+
 class ChatSessionSerializer(ModelSerializer):
     class Meta:
         model = ChatSession
         fields = ['id', 'session_name', 'created_date', 'updated_date', 'user']
         read_only_fields = ['id', 'created_date', 'user']
 
+
 class MessageSerializer(ModelSerializer):
     class Meta:
         model = Message
         fields = ['id', 'sender', 'text', 'created_date', 'session']
         read_only_fields = ['id', 'created_date']
+
 
 class KnowledgeBaseSerializer(ModelSerializer):
     class Meta:
