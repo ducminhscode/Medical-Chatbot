@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useContext, useCallback } from "react";
-import { Box, Typography, TextField, Button, Alert, CircularProgress, List, Avatar, Divider, ListItem, ListItemText, ListItemButton, Paper, IconButton, InputAdornment, Menu, MenuItem, Link } from "@mui/material";
-import { Send as SendIcon, Settings as SettingsIcon, Logout as LogoutIcon, AccountCircle } from "@mui/icons-material";
+import { Box, Typography, TextField, Button, Alert, CircularProgress, List, Avatar, Divider, ListItem, ListItemText, ListItemButton, Paper, IconButton, InputAdornment, Menu, MenuItem, Link, Dialog, DialogContent, DialogActions, DialogTitle } from "@mui/material";
+import { Send as SendIcon, Logout as LogoutIcon, AccountCircle, Edit as EditIcon, Delete as DeleteIcon, MoreVert as MoreVertIcon } from "@mui/icons-material"; // ADDED: MoreVertIcon import
 import { authApis, endpoints } from "../configs/APIs";
 import { useNavigate } from "react-router-dom";
 import cookie from 'react-cookies';
@@ -22,7 +22,15 @@ export default function Home() {
   const messagesEndRef = useRef(null);
   const observerRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [sessionName, setSessionName] = useState("");
+  const [editSession, setEditSession] = useState(null);
+  const [deleteSession, setDeleteSession] = useState(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [sessionMenuAnchorEl, setSessionMenuAnchorEl] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const open = Boolean(anchorEl);
+  const sessionMenuOpen = Boolean(sessionMenuAnchorEl);
 
   const user = useContext(MyUserContext);
   const dispatch = useContext(MyDispatchContext);
@@ -39,11 +47,6 @@ export default function Home() {
     setAnchorEl(null);
   };
 
-  const handleSettings = () => {
-    // navigate("/settings");
-    handleClose();
-  };
-
   const handleProfile = () => {
     navigate("/profile");
     handleClose();
@@ -56,7 +59,17 @@ export default function Home() {
     handleClose();
   };
 
-  const fetchSessions = useCallback(async (url = endpoints["chat_sessions"]) => {
+  const handleSessionMenuClick = (event, sessionId) => {
+    setSessionMenuAnchorEl(event.currentTarget);
+    setCurrentSessionId(sessionId);
+  };
+
+  const handleSessionMenuClose = () => {
+    setSessionMenuAnchorEl(null);
+    setCurrentSessionId(null);
+  };
+
+  const fetchSessions = useCallback(async (url = endpoints["chat_sessions"], append = false) => {
     setLoading(true);
     try {
       const token = cookie.load("access_token");
@@ -65,18 +78,26 @@ export default function Home() {
         return;
       }
       const response = await authApis().get(url);
-      setSessions((prev) => [...prev, ...(response.data.results || [])]);
+      const fetchedSessions = response.data.results || [];
+      setSessions((prev) => {
+        const newSessions = append ? [...prev, ...fetchedSessions] : fetchedSessions;
+        const uniqueSessions = Array.from(
+          new Map(newSessions.map((session) => [session.id, session])).values()
+        );
+        return uniqueSessions;
+      });
       setNextPage(response.data.next);
       setHasMore(!!response.data.next);
     } catch (err) {
-      setError("Không thể tải danh sách phiên chat!");
+      setError("Không thể tải danh sách session");
     } finally {
       setLoading(false);
     }
   }, [navigate]);
 
   useEffect(() => {
-    fetchSessions();
+    setSessions([]);
+    fetchSessions(endpoints["chat_sessions"], false);
   }, [fetchSessions]);
 
   useEffect(() => {
@@ -85,7 +106,7 @@ export default function Home() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && nextPage) {
-          fetchSessions(nextPage);
+          fetchSessions(nextPage, true);
         }
       },
       { threshold: 1.0 }
@@ -103,7 +124,6 @@ export default function Home() {
     };
   }, [nextPage, hasMore, loading, fetchSessions]);
 
-
   useEffect(() => {
     if (selectedSession) {
       const fetchMessages = async () => {
@@ -112,12 +132,14 @@ export default function Home() {
           const response = await authApis().get(endpoints["messages"](selectedSession.id));
           setMessages(response.data);
         } catch (err) {
-          setError("Không thể tải tin nhắn!");
+          setError("Không thể tải tin nhắn");
         } finally {
           setLoading(false);
         }
       };
       fetchMessages();
+    } else {
+      setMessages([]);
     }
   }, [selectedSession]);
 
@@ -125,20 +147,74 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
-  const handleCreateSession = async () => {
+  const handleCreateSession = () => {
+    setSessionName("");
+    setEditSession(null);
+    setOpenDialog(true);
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+  };
+
+  const handleDialogSubmit = async () => {
     setError("");
     setLoading(true);
     try {
-      const response = await authApis().post(endpoints["chat_sessions"], {});
-      setSessions((prev) => [...prev, response.data]);
-      setSelectedSession(response.data);
-      return response.data;
+      if (editSession) {
+        await authApis().put(endpoints["chat_session_detail"](editSession.id), { session_name: sessionName.trim() || "Chưa đặt tên" });
+        await fetchSessions(endpoints["chat_sessions"], false);
+        if (selectedSession && selectedSession.id === editSession.id) {
+          setSelectedSession({ ...selectedSession, session_name: sessionName.trim() || "Chưa đặt tên" });
+        }
+      } else {
+        const response = await authApis().post(endpoints["chat_sessions"], { session_name: sessionName.trim() || "Chưa đặt tên" });
+        await fetchSessions(endpoints["chat_sessions"], false);
+        setSelectedSession(response.data);
+      }
+      setOpenDialog(false);
     } catch (err) {
-      setError("Không thể tạo phiên chat mới!");
-      return null;
+      setError(editSession ? "Không thể cập nhật session" : "Không thể tạo session mới");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditSession = (session) => {
+    setSessionName(session.session_name || "");
+    setEditSession(session);
+    setOpenDialog(true);
+    handleSessionMenuClose();
+  };
+
+  const handleDeleteSession = (session) => {
+    setDeleteSession(session);
+    setOpenDeleteDialog(true);
+    handleSessionMenuClose();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteSession) return;
+    setError("");
+    setLoading(true);
+    try {
+      await authApis().delete(endpoints["chat_session_detail"](deleteSession.id));
+      await fetchSessions(endpoints["chat_sessions"], false);
+      if (selectedSession && selectedSession.id === deleteSession.id) {
+        setSelectedSession(null);
+        setMessages([]);
+      }
+      setOpenDeleteDialog(false);
+    } catch (err) {
+      setError("Không thể xóa phiên chat!");
+      console.error("Delete session error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteDialogClose = () => {
+    setOpenDeleteDialog(false);
   };
 
   const handleSendMessage = async (e) => {
@@ -152,10 +228,9 @@ export default function Home() {
       let currentSession = selectedSession;
 
       if (!currentSession) {
-        const response = await authApis().post(endpoints["chat_sessions"], {});
-        currentSession = response.data;
-        setSessions((prev) => [...prev, currentSession]);
-        setSelectedSession(currentSession);
+        setOpenDialog(true);
+        setSending(false);
+        return;
       }
 
       const tempMessage = {
@@ -171,7 +246,7 @@ export default function Home() {
       const response = await authApis().get(endpoints["messages"](currentSession.id));
       setMessages(response.data);
     } catch (err) {
-      setError("Không thể tạo session hoặc gửi tin nhắn!");
+      setError("Không thể tạo session hoặc gửi tin nhắn");
     } finally {
       setSending(false);
     }
@@ -200,11 +275,44 @@ export default function Home() {
             disabled={loading || sending}
             onClick={handleCreateSession}
             sx={{ marginBottom: '16px', borderRadius: '25px', backgroundColor: '#000000', color: '#ffffff', padding: '12px 0', fontWeight: 500, textTransform: 'none', transition: 'all 0.3s ease', '&:hover': { backgroundColor: '#333333', transform: 'translateY(-2px)' }, '&.Mui-disabled': { backgroundColor: '#cccccc', color: '#666666' } }}>
-            {(loading || sending) ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : 'Trò chuyện mới'}
+            {(loading || sending) ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : 'Tư vấn mới'}
           </Button>
           <List sx={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: '8px' }}>
             {sessions.map((session) => (
-              <ListItem key={session.id} disablePadding sx={{ marginBottom: '8px' }}>
+              <ListItem
+                key={session.id}
+                disablePadding
+                sx={{ marginBottom: '8px' }}
+                secondaryAction={
+                  <Box sx={{ display: 'flex', gap: '16px' }}>
+                    <IconButton
+                      edge="end"
+                      aria-label="more"
+                      onClick={(event) => handleSessionMenuClick(event, session.id)}
+                      sx={{ color: '#000000', '&:hover': { color: '#333333' }, padding: '6px', '& .MuiSvgIcon-root': { fontSize: '18px' } }}
+                    >
+                      <MoreVertIcon />
+                    </IconButton>
+                    <Menu
+                      anchorEl={sessionMenuAnchorEl}
+                      open={sessionMenuOpen && currentSessionId === session.id}
+                      onClose={handleSessionMenuClose}
+                      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                      sx={{ '& .MuiPaper-root': { borderRadius: '8px' } }}
+                    >
+                      <MenuItem onClick={() => handleEditSession(session)} sx={{ fontWeight: 500, color: '#000000', padding: '8px 16px' }}>
+                        <EditIcon sx={{ fontSize: '18px', marginRight: '5px' }} />
+                        Chỉnh sửa
+                      </MenuItem>
+                      <MenuItem onClick={() => handleDeleteSession(session)} sx={{ fontWeight: 500, color: '#ff0000', padding: '8px 16px' }}>
+                        <DeleteIcon sx={{ fontSize: '18px', marginRight: '5px' }} />
+                        Xóa
+                      </MenuItem>
+                    </Menu>
+                  </Box>
+                }
+              >
                 <ListItemButton
                   selected={selectedSession?.id === session.id}
                   onClick={() => setSelectedSession(session)}
@@ -257,10 +365,6 @@ export default function Home() {
               <MenuItem onClick={handleProfile} sx={{ fontWeight: 500, color: '#000000', padding: '8px 16px' }}>
                 <AccountCircle sx={{ fontSize: '20px', marginRight: '5px' }} />
                 Profile
-              </MenuItem>
-              <MenuItem onClick={handleSettings} sx={{ fontWeight: 500, color: '#000000', padding: '8px 16px' }}>
-                <SettingsIcon sx={{ fontSize: '20px', marginRight: '5px' }} />
-                Setting
               </MenuItem>
               <MenuItem onClick={handleLogout} sx={{ fontWeight: 500, color: '#ff0000ff', padding: '8px 16px' }}>
                 <LogoutIcon sx={{ fontSize: '20px', marginRight: '5px' }} />
@@ -353,32 +457,75 @@ export default function Home() {
             </Typography>
           )}
 
-          <Box component="form" onSubmit={handleSendMessage} sx={{ display: 'flex', gap: '12px' }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Bạn cần giúp đỡ gì?"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              disabled={sending}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '25px', backgroundColor: '#ffffff', color: '#000000', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#333333' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '& .MuiInputBase-input': { color: '#000000' }, } }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      type="submit"
-                      disabled={!newMessage.trim() || sending}
-                      sx={{ color: '#000000', '&:hover': { color: '#333333' }, '&.Mui-disabled': { color: '#cccccc' } }}
-                    >
-                      <SendIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
+          {selectedSession && (
+            <Box component="form" onSubmit={handleSendMessage} sx={{ display: 'flex', gap: '12px' }}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Bạn cần giúp đỡ gì?"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                disabled={sending}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '25px', backgroundColor: '#ffffff', color: '#000000', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#333333' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#000000' }, '& .MuiInputBase-input': { color: '#000000' }, } }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="submit"
+                        disabled={!newMessage.trim() || sending}
+                        sx={{ color: '#000000', '&:hover': { color: '#333333' }, '&.Mui-disabled': { color: '#cccccc' } }}
+                      >
+                        <SendIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+          )}
         </Box>
       </Box>
+
+      <Dialog open={openDialog} onClose={handleDialogClose}>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label={editSession ? "Chỉnh sửa tên phiên chat" : "Tên phiên chat"}
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={sessionName}
+            onChange={(e) => setSessionName(e.target.value)}
+            sx={{ marginTop: '16px' }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} sx={{ color: '#666666' }}>
+            Hủy
+          </Button>
+          <Button onClick={handleDialogSubmit} disabled={loading} sx={{ color: '#000000' }}>
+            {loading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : editSession ? 'Cập nhật' : 'Tạo'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openDeleteDialog} onClose={handleDeleteDialogClose}>
+        <DialogTitle>Xác nhận xóa phiên chat</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc muốn xóa phiên chat "{deleteSession?.session_name || "Chưa đặt tên"}"?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteDialogClose} sx={{ color: '#666666' }}>
+            Hủy
+          </Button>
+          <Button onClick={handleConfirmDelete} disabled={loading} sx={{ color: '#ff0000' }}>
+            {loading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : 'Xóa'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
