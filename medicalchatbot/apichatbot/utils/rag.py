@@ -1,12 +1,12 @@
 import os
+import pandas as pd
 from langchain.chains import ConversationalRetrievalChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, CSVLoader
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,11 +15,11 @@ load_dotenv()
 class RAGSystem:
     def __init__(self):
         # Khai báo biến
-        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.OPENAI_URL = "https://conductor.arcee.ai/v1"
-        self.OPENAI_MODEL = "auto"
+        self.OPENAI_API_KEY = os.getenv("TOGETHER_API_KEY")
+        self.OPENAI_URL = "https://api.together.ai/v1"
+        self.OPENAI_MODEL = "meta-llama/Llama-Vision-Free"
         self.CHROMA_PATH = "vectorstore"
-        self.PDF_PATH = "data"
+        self.DATA_PATH = "data"
 
         # Khởi tạo components
         self.llm = self._create_llm()
@@ -27,7 +27,6 @@ class RAGSystem:
         self.vectorstore = self._load_or_create_vectorstore()
         self.qa_chain = self._create_qa_chain()
 
-    # Khởi tạo mô hình OpenAI
     def _create_llm(self, streaming=False):
         return ChatOpenAI(
             model=self.OPENAI_MODEL,
@@ -36,7 +35,6 @@ class RAGSystem:
             streaming=streaming,
         )
 
-    # Khởi tạo embeddings
     def _create_embeddings(self):
         return HuggingFaceEmbeddings(
             model_name="BAAI/bge-small-en-v1.5",
@@ -44,7 +42,6 @@ class RAGSystem:
             encode_kwargs={"normalize_embeddings": True},
         )
 
-    # Tách văn bản
     def _get_text_splitter(self):
         return RecursiveCharacterTextSplitter(
             chunk_size=1024,
@@ -53,10 +50,8 @@ class RAGSystem:
             add_start_index=True,
         )
 
-    # Tải vectorstore hiện có hoặc tạo mới
     def _load_or_create_vectorstore(self):
 
-        # Load vectorstore hiện tại
         if os.path.exists(self.CHROMA_PATH):
             print("Đang tải dữ liệu Chroma hiện có...")
             return Chroma(
@@ -64,17 +59,27 @@ class RAGSystem:
                 embedding_function=self.embeddings
             )
 
-        # Tạo mới vectorstore
         os.makedirs(self.CHROMA_PATH, exist_ok=True)
-        os.makedirs(self.PDF_PATH, exist_ok=True)
+        os.makedirs(self.DATA_PATH, exist_ok=True)
 
-        # Tải tài liệu nếu có
-        if os.listdir(self.PDF_PATH):
-            print("Đang tải tài liệu...")
-            loader = DirectoryLoader(self.PDF_PATH, glob="**/*.pdf", loader_cls=PyPDFLoader)
-            documents = loader.load()
+        all_docs = []
+
+        # Load PDF
+        pdf_loader = DirectoryLoader(self.DATA_PATH, glob="**/*.pdf", loader_cls=PyPDFLoader)
+        pdf_docs = pdf_loader.load()
+        all_docs.extend(pdf_docs)
+
+        # Load CSV
+        csv_files = [f for f in os.listdir(self.DATA_PATH) if f.endswith(".csv")]
+        for csv_file in csv_files:
+            csv_path = os.path.join(self.DATA_PATH, csv_file)
+            csv_loader = CSVLoader(file_path=csv_path, encoding="utf-8")
+            csv_docs = csv_loader.load()
+            all_docs.extend(csv_docs)
+
+        if all_docs:
             text_splitter = self._get_text_splitter()
-            splits = text_splitter.split_documents(documents)
+            splits = text_splitter.split_documents(all_docs)
 
             return Chroma.from_documents(
                 documents=splits,
@@ -82,8 +87,7 @@ class RAGSystem:
                 persist_directory=self.CHROMA_PATH
             )
 
-        print("Không tìm thấy tệp PDF nào trong thư mục...")
-        # Trả về vectorstore trống nếu không có tài liệu
+        print("Không tìm thấy tài liệu nào trong thư mục...")
         return Chroma(
             embedding_function=self.embeddings,
             persist_directory=self.CHROMA_PATH
@@ -95,12 +99,8 @@ class RAGSystem:
         Use the following context to answer the user's question in a clear and simple way. 
         Do not give a medical diagnosis or prescription. If the answer is not in the context or you are unsure, say you don't know and suggest consulting a qualified healthcare professional. 
         Keep the answer within 120-140 words.
-
         Context: {context}
-        
-        Conversation History:
-        {chat_history}
-        
+        Conversation History:{chat_history}
         Current Question: {question}
         """
 
@@ -124,11 +124,16 @@ class RAGSystem:
         })
 
         response = result["answer"]
-
         return response
 
     def add_documents(self, file_path):
-        loader = PyPDFLoader(file_path)
+        if file_path.endswith(".pdf"):
+            loader = PyPDFLoader(file_path)
+        elif file_path.endswith(".csv"):
+            loader = CSVLoader(file_path, encoding="utf-8")
+        else:
+            raise ValueError("Chỉ hỗ trợ file PDF hoặc CSV")
+
         documents = loader.load()
         text_splitter = self._get_text_splitter()
         splits = text_splitter.split_documents(documents)
