@@ -90,19 +90,19 @@ class RAGSystem:
         )
 
     def _create_qa_chain(self):
-        prompt_template = """You are a helpful AI assistant. Focus on answering the current question using the provided context. Only use the conversation history if it is directly relevant to the current question.
+        prompt_template = """
+        You are a medical assistant that provides helpful, safe, and concise health information. 
+        Use the following context to answer the user's question in a clear and simple way. 
+        Do not give a medical diagnosis or prescription. If the answer is not in the context or you are unsure, say you don't know and suggest consulting a qualified healthcare professional. 
+        Keep the answer within 120-140 words.
 
-        Context:
-        {context}
+        Context: {context}
         
         Conversation History:
         {chat_history}
         
         Current Question: {question}
-        
-        Answer in a helpful, friendly manner with detailed explanations. 
-        Provide comprehensive information and examples when possible.
-        If the question isn't related to the context, use your general knowledge to answer:"""
+        """
 
         prompt = ChatPromptTemplate.from_template(prompt_template)
 
@@ -124,17 +124,6 @@ class RAGSystem:
         })
 
         response = result["answer"]
-
-        # Thêm nguồn của tài liệu nếu có
-        if result.get("source_documents"):
-            sources = set()
-            for doc in result["source_documents"]:
-                source = doc.metadata.get("source", "Unknown")
-                page = doc.metadata.get("page", "unknown")
-                sources.add(f"{source}, page {page}")
-
-            if sources:
-                response += "\n\nSources:\n" + "\n".join(f"- {src}" for src in sources)
 
         return response
 

@@ -453,7 +453,7 @@ export default function Home() {
             </Paper>
           ) : (
             <Typography variant="body1" sx={{ color: '#666666', fontStyle: 'italic', margin: 'auto' }}>
-              Chúng ta nên bắt đầu từ đâu?
+              Hãy đặt câu hỏi để được tư vấn ngay
             </Typography>
           )}
 
