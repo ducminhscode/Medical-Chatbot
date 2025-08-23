@@ -1,2 +1,12 @@
 # Medical-Chatbot
 Chatbot tư vấn y tế (Đồ án ngành)
+
+.evn
+HUGGINGFACE_API_TOKEN=
+DATABASE_NAME=
+DATABASE_PASSWORD=
+CLOUD_NAME=
+CLOUD_API_KEY=
+CLOUD_API_SECRET=
+EMAIL=
+OPENAI_API_KEY=
