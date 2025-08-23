@@ -1,7 +1,7 @@
 # Medical-Chatbot
 Chatbot tư vấn y tế (Đồ án ngành)
 
-.evn <br/>
+.env <br/>
 HUGGINGFACE_API_TOKEN=<br/>
 DATABASE_NAME=<br/>
 DATABASE_PASSWORD=<br/>
