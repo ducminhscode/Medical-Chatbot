@@ -8,6 +8,7 @@ import Home from "./components/Home";
 import cookie from 'react-cookies';
 import { authApis, endpoints } from "./configs/APIs";
 import Profile from "./components/Profile";
+import Admin from "./components/Admin";
 
 function App() {
   const [user, dispatch] = useReducer(MyUserReducer, null);
@@ -52,6 +53,7 @@ function App() {
                     <Routes>
                       <Route path="/home" element={user ? <Home /> : <Navigate to="/" replace />} />
                       <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" replace />} />
+                      <Route path="/admin" element={user ? (user.role === 1 ? (<Admin />) : <Navigate to="/home" />) : <Navigate to="/" replace />} />
                     </Routes>
                   </div>
                 </>
