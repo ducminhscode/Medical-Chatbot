@@ -504,7 +504,7 @@ export default function Home() {
           <Button onClick={handleDialogClose} sx={{ color: '#666666' }}>
             Hủy
           </Button>
-          <Button onClick={handleDialogSubmit} disabled={loading} sx={{ color: '#000000' }}>
+          <Button onClick={handleDialogSubmit} disabled={loading} sx={{ backgroundColor: '#000000', color: '#ffffff', '&:hover': { backgroundColor: '#333333' } }}>
             {loading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : editSession ? 'Cập nhật' : 'Tạo'}
           </Button>
         </DialogActions>

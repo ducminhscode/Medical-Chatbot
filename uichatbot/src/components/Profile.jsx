@@ -157,7 +157,7 @@ const Profile = () => {
                     </Link>
                 </Typography>
             </Box>
-            <Container maxWidth="sm" sx={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh", textAlign: "center" }}>
+            <Container maxWidth="sm" sx={{ display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center" }}>
                 <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mt: 2 }}>
                     Thông tin người dùng
                 </Typography>

@@ -11,6 +11,7 @@ export const endpoints = {
     'all_users': '/user/all-users/',
     'change_password': '/user/change-password/',
     'profile': '/user/profile/',
+    'user_by_id': (id) => `/user/by-id/${id}/`,
 
     'knowledge': '/knowledge/',
     'knowledge_detail': (id) => `/knowledge/${id}/`,

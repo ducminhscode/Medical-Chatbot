@@ -27,7 +27,7 @@ class UserSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "password", "avatar", "first_name", "last_name", "email", "is_male",
-                  "date_of_birth", "role"]
+                  "date_of_birth", "role", "date_joined"]
         extra_kwargs = {
             'password': {
                 'write_only': True
@@ -63,6 +63,7 @@ class MessageSerializer(ModelSerializer):
 
 
 class KnowledgeBaseSerializer(ModelSerializer):
+    uploaded_by=UserSerializer(read_only=True)
     class Meta:
         model = KnowledgeBase
         fields = ['id', 'title', 'description', 'file', 'uploaded_by', 'created_date']
