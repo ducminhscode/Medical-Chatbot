@@ -198,6 +198,7 @@ const Admin = () => {
             setKnowledge((prev) => [res.data, ...prev]);
             setMessage({ text: "Thêm datasets thành công", variant: "success" });
             handleCloseAddKB();
+            fetchKnowledge();
         } catch (err) {
             setMessage({ text: "Thêm datasets thất bại", variant: "error" });
         } finally {
@@ -289,7 +290,7 @@ const Admin = () => {
                         <>
                             <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
                                 <Button sx={{ width: '280px', marginBottom: '16px', borderRadius: '25px', backgroundColor: '#000000', color: '#ffffff', padding: '12px 0', fontWeight: 500, textTransform: 'none', transition: 'all 0.3s ease', '&:hover': { backgroundColor: '#333333', transform: 'translateY(-2px)' }, '&.Mui-disabled': { backgroundColor: '#cccccc', color: '#666666' } }} variant="contained" onClick={handleOpenAddKB}>
-                                    Thêm Dataset
+                                    Thêm Datasets
                                 </Button>
                             </Box>
                             <Paper sx={{ maxHeight: 'calc(50vh - 100px)', overflowY: 'auto', p: 2, borderRadius: 3, boxShadow: 3 }}>
@@ -349,12 +350,12 @@ const Admin = () => {
                             <Typography><b>Email:</b> {selectedUser.email}</Typography>
                             <Typography><b>Họ:</b> {selectedUser.last_name}</Typography>
                             <Typography><b>Tên:</b> {selectedUser.first_name}</Typography>
-                            <Typography><b>Ngày sinh:</b> {selectedUser.date_of_birth ? new Date(selectedUser.date_of_birth).toLocaleString() : ""}</Typography>
+                            <Typography><b>Ngày sinh:</b> {selectedUser.date_of_birth ? new Date(selectedUser.date_of_birth).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ""}</Typography>
                             <Typography><b>Giới tính:</b> {selectedUser.is_male ? (selectedUser.is_male === 1 ? "Nam" : "Nữ") : ""}</Typography>
                             <Typography><b>Ngày tạo:</b> {new Date(selectedUser.date_joined).toLocaleString()}</Typography>
                         </Box>
                     ) : (
-                        <Typography>Không tìm thấy thông tin.</Typography>
+                        <Typography>Không tìm thấy thông tin</Typography>
                     )}
                 </DialogContent>
                 <DialogActions>
@@ -363,7 +364,7 @@ const Admin = () => {
             </Dialog>
 
             <Dialog open={openKBDialog} onClose={() => setOpenKBDialog(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Thông tin Knowledge Base</DialogTitle>
+                <DialogTitle>Thông tin Dataset</DialogTitle>
                 <DialogContent dividers>
                     {detailKBLoading ? (
                         <CircularProgress />
@@ -467,7 +468,7 @@ const Admin = () => {
                         disabled={uploading}
                         sx={{ backgroundColor: '#000000', color: '#ffffff', '&:hover': { backgroundColor: '#333333' } }}
                     >
-                        {uploading ? "Đang lưu..." : "Thêm"}
+                        {uploading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : "Thêm"}
                     </Button>
                 </DialogActions>
             </Dialog>
