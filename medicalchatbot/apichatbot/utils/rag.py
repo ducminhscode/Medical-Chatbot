@@ -6,7 +6,7 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, CSVLoader
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_fireworks import ChatFireworks
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,8 +16,8 @@ class RAGSystem:
     def __init__(self):
         # Khai báo biến
         self.OPENAI_API_KEY = os.getenv("TOGETHER_API_KEY")
-        self.OPENAI_URL = "https://api.together.ai/v1"
-        self.OPENAI_MODEL = "meta-llama/Llama-Vision-Free"
+        self.OPENAI_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
+        self.OPENAI_MODEL = "accounts/fireworks/models/gpt-oss-120b"
         self.CHROMA_PATH = "vectorstore"
         self.DATA_PATH = "data"
 
@@ -28,10 +28,9 @@ class RAGSystem:
         self.qa_chain = self._create_qa_chain()
 
     def _create_llm(self, streaming=False):
-        return ChatOpenAI(
-            model=self.OPENAI_MODEL,
-            openai_api_key=self.OPENAI_API_KEY,
-            base_url=self.OPENAI_URL,
+        return ChatFireworks(
+            model= self.OPENAI_MODEL,
+            fireworks_api_key=self.OPENAI_API_KEY,
             streaming=streaming,
         )
 
