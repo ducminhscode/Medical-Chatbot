@@ -119,8 +119,13 @@ export default function Home() {
 
     return () => {
       if (currentRef) {
-        observer.unobserve(currentRef);
+        try {
+          observer.unobserve(currentRef);
+        } catch (err) {
+          console.error("Observer unobserve error:", err);
+        }
       }
+      observer.disconnect();
     };
   }, [nextPage, hasMore, loading, fetchSessions]);
 
