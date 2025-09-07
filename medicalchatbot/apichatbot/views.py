@@ -2,13 +2,15 @@ from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.core.cache import cache
+from django.core.mail import send_mail
 
 from .paginators import Pagination
-from .perms import OwnerPermission, AdminPermission
+from .perms import OwnerPermission, AdminPermission, AllowAllPermission
 from rest_framework.permissions import IsAuthenticated, AllowAny
-
+import random
 from .serializers import UserSerializer, ChangePasswordSerializer, ChatSessionSerializer, MessageSerializer, \
-    KnowledgeBaseSerializer
+    KnowledgeBaseSerializer, SendOTPSerializer, VerifyOTPSerializer, ChangePWForgetSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from .models import User, ChatSession, Message, KnowledgeBase
@@ -16,14 +18,18 @@ from .utils.rag import RAGSystem
 import os
 
 rag_system = RAGSystem()
+
+
 # Create your views here.
 
 class UserViewSet(viewsets.ViewSet):
     def get_permissions(self):
         if self.action in ["change_password", "get_current_user", "update_profile"]:
             return [OwnerPermission()]
-        if self.action == "get_all_users":
+        if self.action in ["get_all_users", "get_user_by_id", "status"]:
             return [AdminPermission()]
+        if self.action in ["send_otp", "verify_otp", "reset_password"]:
+            return [AllowAllPermission()]
         return [IsAuthenticated()]
 
     @action(methods=['get'], url_path='all-users', detail=False)
@@ -44,9 +50,24 @@ class UserViewSet(viewsets.ViewSet):
         try:
             user = User.objects.get(pk=user_id, is_active=True)
         except User.DoesNotExist:
-            return Response({"error": "Người dùng không tồn tại hoặc đã bị khóa."},status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Người dùng không tồn tại hoặc đã bị khóa."}, status=status.HTTP_404_NOT_FOUND)
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=['patch'], url_path='status/(?P<id>[^/.]+)', detail=False)
+    def status(self, request, **kwargs):
+        user_id = kwargs.get('id')
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Người dùng không tồn tại."}, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_active = not user.is_active
+        user.save(update_fields=['is_active'])
+
+        status_text = "đã bị khóa" if not user.is_active else "đã được mở khóa"
+
+        return Response({"message": f"Tài khoản {user.username} {status_text}."}, status=status.HTTP_200_OK)
 
     @action(methods=['get'], url_path='current', detail=False)
     def get_current_user(self, request):
@@ -80,6 +101,69 @@ class UserViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['post'], url_path='send-otp', detail=False)
+    def send_otp(self, request):
+        serializer = SendOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try:
+            user = User.objects.get(email=email, is_active=True)
+        except User.DoesNotExist:
+            return Response({"error": "Email này không tồn tại trong hệ thống."}, status=status.HTTP_404_NOT_FOUND)
+
+        otp_code = f"{random.randint(100000, 999999)}"
+
+        cache.set(f"otp_{email}", otp_code, timeout=300)
+
+        send_mail(
+            subject="Mã OTP xác thực",
+            message=f"Mã OTP của bạn là: {otp_code}. Mã này có hiệu lực trong 5 phút.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return Response({"message": "Mã OTP đã được gửi đến email của bạn."}, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], url_path='verify-otp', detail=False)
+    def verify_otp(self, request):
+        serializer = VerifyOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        otp = serializer.validated_data['otp']
+
+        cached_otp = cache.get(f"otp_{email}")
+        if cached_otp and cached_otp == otp:
+            cache.delete(f"otp_{email}")
+            cache.set(f"otp_verified_{email}", True, timeout=600)
+            return Response(status=status.HTTP_200_OK)
+
+        return Response({"error": "OTP không hợp lệ hoặc đã hết hạn."}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['post'], url_path='reset-password', detail=False)
+    def reset_password(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Vui lòng nhập email."}, status=status.HTTP_400_BAD_REQUEST)
+
+        verified_key = f"otp_verified_{email}"
+        if not cache.get(verified_key):
+            return Response({"error": "OTP chưa được xác thực hoặc đã hết hạn."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ChangePWForgetSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = User.objects.get(email=email, is_active=True)
+            except User.DoesNotExist:
+                return Response({"error": "Không tìm thấy người dùng."}, status=status.HTTP_404_NOT_FOUND)
+
+            user.set_password(serializer.validated_data['new_password'])
+            user.save(update_fields=['password'])
+            cache.delete(verified_key)
+            return Response({"message": "Mật khẩu đã được đặt lại thành công."}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -90,6 +174,7 @@ class RegisterViewSet(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ChatSessionViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, OwnerPermission]
@@ -261,4 +346,4 @@ class KnowledgeBaseViewSet(viewsets.ViewSet):
             os.remove(file_path)
 
         knowledge.delete()
-        return Response({"success": "File đã được xóa."},status=status.HTTP_204_NO_CONTENT)
+        return Response({"success": "File đã được xóa."}, status=status.HTTP_204_NO_CONTENT)

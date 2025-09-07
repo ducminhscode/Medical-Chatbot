@@ -27,7 +27,7 @@ class UserSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "password", "avatar", "first_name", "last_name", "email", "is_male",
-                  "date_of_birth", "role", "date_joined"]
+                  "date_of_birth", "role", "date_joined", "is_active"]
         extra_kwargs = {
             'password': {
                 'write_only': True
@@ -45,6 +45,15 @@ class ChangePasswordSerializer(Serializer):
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError("Mật khẩu hiện tại không đúng.")
+        return value
+
+class ChangePWForgetSerializer(Serializer):
+    new_password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, value):
+        if value['new_password'] != value['confirm_password']:
+            raise serializers.ValidationError({"error": "Mật khẩu xác nhận không khớp."})
         return value
 
 
@@ -68,3 +77,10 @@ class KnowledgeBaseSerializer(ModelSerializer):
         model = KnowledgeBase
         fields = ['id', 'title', 'description', 'file', 'uploaded_by', 'created_date']
         read_only_fields = ['id', 'uploaded_by', 'created_date']
+
+class SendOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)

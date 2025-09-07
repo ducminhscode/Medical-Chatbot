@@ -147,6 +147,14 @@ export default function Login() {
                         Đăng ký
                     </Link>
                 </Typography>
+
+                <Typography variant="body2" align="center" sx={{ mt: 1 }}>
+                    {" "}
+                    <Link href="/auth-email" underline="hover">
+                        Quên mật khẩu
+                    </Link>
+                </Typography>
+
             </Container>
         </Box>
     );

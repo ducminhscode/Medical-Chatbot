@@ -12,6 +12,7 @@ export const endpoints = {
     'change_password': '/user/change-password/',
     'profile': '/user/profile/',
     'user_by_id': (id) => `/user/by-id/${id}/`,
+    'user_status': (id) => `/user/status/${id}/`,
 
     'knowledge': '/knowledge/',
     'knowledge_detail': (id) => `/knowledge/${id}/`,
@@ -20,6 +21,10 @@ export const endpoints = {
     'chat_session_detail': (id) => `/chat-sessions/${id}/`,
 
     'messages': (session_id) => `/chat-sessions/${session_id}/messages/`,
+
+    'send_otp': 'user/send-otp/',
+    'verify_otp': 'user/verify-otp/',
+    'reset_password': 'user/reset-password/',
 }
 
 export const authApis = () => {

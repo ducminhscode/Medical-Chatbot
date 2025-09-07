@@ -10,3 +10,7 @@ class AdminPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         return request.user.role == 1
+
+class AllowAllPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return True

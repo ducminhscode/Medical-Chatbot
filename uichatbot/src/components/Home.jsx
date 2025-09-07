@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { Box, Typography, TextField, Button, Alert, CircularProgress, List, Avatar, Divider, ListItem, ListItemText, ListItemButton, Paper, IconButton, InputAdornment, Menu, MenuItem, Link, Dialog, DialogContent, DialogActions, DialogTitle } from "@mui/material";
-import { Send as SendIcon, Logout as LogoutIcon, AccountCircle, Edit as EditIcon, Delete as DeleteIcon, MoreVert as MoreVertIcon } from "@mui/icons-material";
+import { Send as SendIcon, Logout as LogoutIcon, AccountCircle, Edit as EditIcon, Delete as DeleteIcon, MoreVert as MoreVertIcon, Dashboard } from "@mui/icons-material";
 import { authApis, endpoints } from "../configs/APIs";
 import { useNavigate } from "react-router-dom";
 import cookie from 'react-cookies';
@@ -31,6 +31,13 @@ export default function Home() {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const open = Boolean(anchorEl);
   const sessionMenuOpen = Boolean(sessionMenuAnchorEl);
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchSessions, setSearchSessions] = useState([]);
+  const [searchNextPage, setSearchNextPage] = useState(null);
+  const [searchHasMore, setSearchHasMore] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchObserverRef = useRef(null);
 
   const user = useContext(MyUserContext);
   const dispatch = useContext(MyDispatchContext);
@@ -49,6 +56,11 @@ export default function Home() {
 
   const handleProfile = () => {
     navigate("/profile");
+    handleClose();
+  };
+
+  const handleAdminDashboard = () => {
+    navigate("/admin");
     handleClose();
   };
 
@@ -95,6 +107,32 @@ export default function Home() {
     }
   }, [navigate]);
 
+  const fetchSearchSessions = useCallback(async (url = endpoints["chat_sessions"], append = false) => {
+    setSearchLoading(true);
+    try {
+      const token = cookie.load("access_token");
+      if (!token) {
+        navigate("/");
+        return;
+      }
+      const response = await authApis().get(url);
+      const fetchedSessions = response.data.results || [];
+      setSearchSessions((prev) => {
+        const newSessions = append ? [...prev, ...fetchedSessions] : fetchedSessions;
+        const uniqueSessions = Array.from(
+          new Map(newSessions.map((session) => [session.id, session])).values()
+        );
+        return uniqueSessions;
+      });
+      setSearchNextPage(response.data.next);
+      setSearchHasMore(!!response.data.next);
+    } catch (err) {
+      setError("Không thể tải danh sách session trong tìm kiếm");
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [navigate]);
+
   useEffect(() => {
     setSessions([]);
     fetchSessions(endpoints["chat_sessions"], false);
@@ -128,6 +166,46 @@ export default function Home() {
       observer.disconnect();
     };
   }, [nextPage, hasMore, loading, fetchSessions]);
+
+  useEffect(() => {
+    if (!openSearchDialog) {
+      setSearchSessions([]);
+      setSearchNextPage(null);
+      setSearchHasMore(true);
+      setSearchQuery("");
+      return;
+    }
+    fetchSearchSessions(endpoints["chat_sessions"], false);
+  }, [openSearchDialog, fetchSearchSessions]);
+
+  useEffect(() => {
+    if (!openSearchDialog || !searchHasMore || searchLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && searchNextPage) {
+          fetchSearchSessions(searchNextPage, true);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const currentRef = searchObserverRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        try {
+          observer.unobserve(currentRef);
+        } catch (err) {
+          console.error("Search observer unobserve error:", err);
+        }
+      }
+      observer.disconnect();
+    };
+  }, [openSearchDialog, searchNextPage, searchHasMore, searchLoading, fetchSearchSessions]);
 
   useEffect(() => {
     if (selectedSession) {
@@ -282,7 +360,15 @@ export default function Home() {
             sx={{ marginBottom: '16px', borderRadius: '25px', backgroundColor: '#000000', color: '#ffffff', padding: '12px 0', fontWeight: 500, textTransform: 'none', transition: 'all 0.3s ease', '&:hover': { backgroundColor: '#333333', transform: 'translateY(-2px)' }, '&.Mui-disabled': { backgroundColor: '#cccccc', color: '#666666' } }}>
             {(loading || sending) ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : 'Tư vấn mới'}
           </Button>
-          <List sx={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: '8px' }}>
+          <Button
+            variant="contained"
+            fullWidth
+            disabled={loading || sending}
+            onClick={() => setOpenSearchDialog(true)}
+            sx={{ marginBottom: '16px', borderRadius: '8px', backgroundColor: '#ffffffff', color: '#000000ff', padding: '8px 0', fontWeight: 500, textTransform: 'none', transition: 'all 0.3s ease' }}>
+            Tìm kiếm
+          </Button>
+          <List sx={{ maxHeight: 'calc(93vh - 300px)', overflowY: 'auto', paddingRight: '8px' }}>
             {sessions.map((session) => (
               <ListItem
                 key={session.id}
@@ -367,13 +453,21 @@ export default function Home() {
               transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               sx={{ '& .MuiPaper-root': { borderRadius: '8px' } }}
             >
+              {user.role === 1 && (
+                <MenuItem onClick={handleAdminDashboard} sx={{ fontWeight: 500, color: '#000000', padding: '8px 16px', cursor: 'default' }}>
+                  <Dashboard sx={{ fontSize: '20px', marginRight: '5px' }} />
+                  Admin Dashboard
+                </MenuItem>
+              )}
+              {user.role === 1 && <Divider />}
               <MenuItem onClick={handleProfile} sx={{ fontWeight: 500, color: '#000000', padding: '8px 16px' }}>
                 <AccountCircle sx={{ fontSize: '20px', marginRight: '5px' }} />
-                Profile
+                Thông tin cá nhân
               </MenuItem>
+              <Divider />
               <MenuItem onClick={handleLogout} sx={{ fontWeight: 500, color: '#ff0000ff', padding: '8px 16px' }}>
                 <LogoutIcon sx={{ fontSize: '20px', marginRight: '5px' }} />
-                Log out
+                Đăng xuất
               </MenuItem>
             </Menu>
           </Box>
@@ -528,6 +622,58 @@ export default function Home() {
           </Button>
           <Button onClick={handleConfirmDelete} disabled={loading} sx={{ color: '#ff0000' }}>
             {loading ? <CircularProgress size={24} sx={{ color: '#666666' }} /> : 'Xóa'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openSearchDialog} onClose={() => setOpenSearchDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Tìm kiếm phiên chat</DialogTitle>
+        <DialogContent>
+          <TextField autoFocus margin="dense" label="Nhập tên phiên chat" type="text" fullWidth variant="outlined" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} sx={{ marginBottom: '16px' }}/>
+          <List sx={{ maxHeight: '50vh', overflowY: 'auto', paddingRight: '8px' }}>
+            {searchSessions
+              .filter((s) =>
+                (s.session_name || "Chưa đặt tên").toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((session) => (
+                <ListItemButton
+                  key={session.id}
+                  onClick={() => {
+                    setSelectedSession(session);
+                    setOpenSearchDialog(false);
+                  }}
+                  sx={{
+                    borderRadius: '8px',
+                    marginBottom: '8px',
+                    '&:hover': { backgroundColor: '#f5f5f5' },
+                  }}
+                >
+                  <ListItemText
+                    primary={session.session_name || "Chưa đặt tên"}
+                    secondary={
+                      session.updated_date
+                        ? new Date(session.updated_date).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })
+                        : "Không có thời gian"
+                    }
+                  />
+                </ListItemButton>
+              ))}
+            {searchHasMore && (
+              <div ref={searchObserverRef} style={{ height: '20px' }}>
+                {searchLoading && <CircularProgress size={20} sx={{ display: 'block', margin: '0 auto' }} />}
+              </div>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSearchDialog(false)} sx={{ color: '#666666' }}>
+            Đóng
           </Button>
         </DialogActions>
       </Dialog>

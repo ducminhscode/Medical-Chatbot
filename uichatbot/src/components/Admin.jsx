@@ -206,6 +206,33 @@ const Admin = () => {
         }
     };
 
+    const handleToggleUserStatus = async (id) => {
+        try {
+            const token = cookie.load("access_token");
+            if (!token) {
+                navigate("/login");
+                return;
+            }
+
+            const res = await authApis().patch(endpoints['user_status'](id));
+
+            setUsers((prev) =>
+                prev.map((u) =>
+                    u.id === id ? { ...u, is_active: res.data.is_active } : u
+                )
+            );
+
+            if (selectedUser && selectedUser.id === id) {
+                setSelectedUser((prev) => ({ ...prev, is_active: res.data.is_active }));
+            }
+
+            setMessage({ text: res.data.message, variant: "success" });
+        } catch (err) {
+            setMessage({ text: "Không thể thay đổi trạng thái user", variant: "error" });
+        }
+    };
+
+
     const handleAvatarSrc = (avatar) => {
         if (!avatar) return undefined;
         if (avatar.startsWith('image/upload/https://res.cloudinary.com/dp9b0dkkt/')) {
@@ -360,6 +387,14 @@ const Admin = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button sx={{ color: "#666666" }} onClick={() => setOpenDialog(false)}>Đóng</Button>
+                    {selectedUser && (
+                        <Button
+                            sx={{ background: selectedUser.is_active ? "#ff0000" : "#00c853", color: "#ffffff" }}
+                            onClick={() => handleToggleUserStatus(selectedUser.id)}
+                        >
+                            {selectedUser.is_active ? "Khóa" : "Mở khóa"}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
 

@@ -9,6 +9,9 @@ import cookie from 'react-cookies';
 import { authApis, endpoints } from "./configs/APIs";
 import Profile from "./components/Profile";
 import Admin from "./components/Admin";
+import AuthEmail from "./components/AuthEmail";
+import AuthOTP from "./components/AuthOTP";
+import ChangePassword from "./components/ChangePassword";
 
 function App() {
   const [user, dispatch] = useReducer(MyUserReducer, null);
@@ -45,9 +48,11 @@ function App() {
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route
-              path="*"
-              element={
+            <Route path="/auth-email" element={<AuthEmail />} />
+            <Route path="/auth-otp" element={<AuthOTP />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="*" 
+            element={
                 <>
                   <div>
                     <Routes>
