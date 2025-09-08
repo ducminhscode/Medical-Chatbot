@@ -156,7 +156,7 @@ export default function Home() {
     }
 
     return () => {
-      if (currentRef) {
+      if (currentRef && currentRef.parentNode) {
         try {
           observer.unobserve(currentRef);
         } catch (err) {

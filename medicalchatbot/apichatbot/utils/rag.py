@@ -100,6 +100,7 @@ class RAGSystem:
         Keep the answer within 3 sentences.
         If the current question is unrelated to the conversation history, ignore the conversation history and only use the current question and context.
         Do not mention the context in your response.
+        Use the same language as the question. If the question is in multiple languages, please respond in English.
         Context: {context}
         Conversation History: {chat_history}
         Current Question: {question}
